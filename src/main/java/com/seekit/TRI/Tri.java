@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 import com.seekit.bd.DatabaseConnection;
 
@@ -44,6 +45,10 @@ public class Tri {
 
 	public Tri(String idTri) {
 		this.idTri = idTri;
+	}
+
+	public Tri() {
+
 	}
 
 	public String getIdentificador() {
@@ -182,8 +187,8 @@ public class Tri {
 
 	}
 
-	public boolean Compartir(String mailUsuACompartir, String idUsuario,
-			String habilitado) {
+	public boolean compartir(String mailUsuACompartir, String idUsuario,
+			String habilitado, String comentario) {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
 		// primero tengo que obtener el id del usuario destino.
@@ -194,12 +199,18 @@ public class Tri {
 			System.out.println(sql);
 			resultSet = statement.executeQuery(sql);
 			if (resultSet.next()) {
-				String usuarioReceptor=resultSet.getString("idusuario");
-				sql = "INSERT INTO `tris compartidos`(usuario_idusuario, tri_idtri, tri_usuario_idusuario, habilitado) VALUES ('"+usuarioReceptor+"','"+idTri+"','"+idUsuario+"','"+habilitado+"')";
+				String usuarioReceptor = resultSet.getString("idusuario");
+				sql = "INSERT INTO `tris compartidos`(usuario_idusuario, tri_idtri, tri_usuario_idusuario, habilitado, comentario) VALUES ('"
+						+ usuarioReceptor
+						+ "','"
+						+ idTri
+						+ "','"
+						+ idUsuario
+						+ "','" + habilitado + "','" + comentario + "')";
 				System.out.println(sql);
 				statement.executeUpdate(sql);
 			}
-			
+
 			return true;
 		} catch (SQLException e) {
 
@@ -210,4 +221,27 @@ public class Tri {
 		}
 
 	}
+
+	public boolean editarTri() {
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		try {
+			statement = conn.createStatement();
+			String sql = "UPDATE tri SET identificador='" + identificador
+					+ "',nombre='" + nombre + "',foto='" + foto
+					+ "' WHERE idTri=" + idTri;
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			return true;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			closeLasCosas();
+		}
+	}
+
+	
+
 }

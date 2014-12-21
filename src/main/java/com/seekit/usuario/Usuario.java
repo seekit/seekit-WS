@@ -1,7 +1,9 @@
 package com.seekit.usuario;
 
 import java.sql.*;
+import java.util.ArrayList;
 
+import com.seekit.TRI.TriCompartido;
 import com.seekit.bd.DatabaseConnection;
 
 public class Usuario {
@@ -16,6 +18,7 @@ public class Usuario {
 	private String apellido = null;
 	private String mail = null;
 	private String contrasenia = null;
+	private ArrayList<TriCompartido> arrayListTrisCompartidos = null;
 
 	public Usuario(String nombre, String apellido, String mail,
 			String contrasenia) {
@@ -34,7 +37,16 @@ public class Usuario {
 	}
 
 	public Usuario() {
+		super();
+	}
 
+	public ArrayList<TriCompartido> getArrayListTrisCompartidos() {
+		return arrayListTrisCompartidos;
+	}
+
+	public void setArrayListTrisCompartidos(
+			ArrayList<TriCompartido> arrayListTrisCompartidos) {
+		this.arrayListTrisCompartidos = arrayListTrisCompartidos;
 	}
 
 	public String getNombre() {
@@ -120,6 +132,7 @@ public class Usuario {
 			// en caso de que ya exista el usu paramos todo
 			if (existeUsu()) {
 				closeLasCosas();
+				System.out.println("Esixe el usu");
 				return false;
 			}
 
@@ -136,7 +149,8 @@ public class Usuario {
 
 			// ahora con el ID, puedo rellenar la tabla autenticacion
 			if (resultSet.next()) {
-
+				setidUsuario(resultSet.getString(1));
+				System.out.println(resultSet.getString(1));
 				statement
 						.executeUpdate("INSERT INTO autenticación(usuario_idusuario, mail, pass) VALUES ('"
 								+ resultSet.getString(1)
@@ -147,7 +161,9 @@ public class Usuario {
 
 			}
 			return true;
+
 		} catch (SQLException e) {
+			System.out.println("A");
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return false;
@@ -164,6 +180,7 @@ public class Usuario {
 				resultSet.close();
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
+				System.out.println("a");
 				e.printStackTrace();
 			}
 		}
@@ -171,6 +188,7 @@ public class Usuario {
 			try {
 				statement.close();
 			} catch (SQLException e) {
+				System.out.println("b");
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -179,6 +197,7 @@ public class Usuario {
 			try {
 				conn.close();
 			} catch (SQLException e) {
+				System.out.println("c");
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -193,7 +212,9 @@ public class Usuario {
 			System.out.println(sql);
 			resultSet = statement.executeQuery(sql);
 			if (resultSet.next()) {
+				System.out.println("Este mail es unico");
 				return true;
+
 			} else {
 				return false;
 			}
@@ -224,20 +245,186 @@ public class Usuario {
 
 	}
 
-	public boolean editarusuario() {
+	// va a devolver los tris que le compartieron al usuario y esta habililtados
+	public ResultSet getCompartidosConmigo(String idUsuario2) {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
 		try {
 			statement = conn.createStatement();
-			String sql = "";
+			// String sql =
+			// "SELECT * FROM `tris compartidos` INNER JOIN tri ON `tris compartidos`.`tri_idtri`=tri.`idtri` WHERE `tris compartidos`.`usuario_idusuario`= '"
+			// + idUsuario2 + "' AND `tris compartidos`.habilitado='1'";
+			String sql = "SELECT * FROM `tris compartidos` INNER JOIN tri ON `tris compartidos`.`tri_idtri`=tri.`idtri` INNER JOIN usuario ON usuario.idusuario=`tris compartidos`.tri_usuario_idusuario WHERE `tris compartidos`.`usuario_idusuario`= '"
+					+ idUsuario2 + "' AND `tris compartidos`.habilitado='1'";
 			System.out.println(sql);
 			resultSet = statement.executeQuery(sql);
+
+			return resultSet;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		} finally {
+		}
+
+	}
+
+	// para la edicion del usuario.
+	public boolean editarUsuario() {
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		try {
+			statement = conn.createStatement();
+			String sql = "UPDATE usuario SET mail='" + mail + "',nombre='"
+					+ nombre + "',apellido='" + apellido + "' WHERE idUsuario="
+					+ idUsuario;
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+			sql = "UPDATE autenticación SET mail='" + mail + "',pass='"
+					+ contrasenia + "' WHERE usuario_idusuario=" + idUsuario;
+			System.out.println(sql);
+			statement.executeUpdate(sql);
 
 			return true;
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return false;
 		} finally {
+			closeLasCosas();
+		}
+
+	}
+
+	// devuelven los aquellos usuarios a los que se les compartio un tri
+	// especifico.
+	public ArrayList<Usuario> triCompartido(String idTri) {
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		ArrayList<Usuario> resp = new ArrayList<Usuario>();
+
+		try {
+			statement = conn.createStatement();
+			String sql = "SELECT usuario.idusuario, usuario.mail, usuario.nombre,usuario.apellido FROM `tris compartidos` INNER JOIN tri ON `tris compartidos`.tri_idtri=tri.idtri INNER JOIN usuario ON `tris compartidos`.usuario_idusuario=usuario.idusuario WHERE idtri='"
+					+ idTri + "'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+			while (resultSet.next()) {
+				Usuario usuAux = new Usuario();
+				usuAux.setApellido(resultSet.getString("apellido"));
+				usuAux.setNombre(resultSet.getString("nombre"));
+				usuAux.setidUsuario(resultSet.getString("idusuario"));
+				usuAux.setMail(resultSet.getString("mail"));
+
+				resp.add(usuAux);
+
+			}
+
+			return resp;
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			return null;
+		} finally {
+
+			closeLasCosas();
+
+		}
+
+	}
+
+	// devuelve aquellos usuarios que quieran compartir un tri a el usuario
+	// logueado.
+	public ArrayList<TriCompartido> notificaciones() {
+
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		//ArrayList<Usuario> resp = new ArrayList<Usuario>();
+
+		try {
+			statement = conn.createStatement();
+			String sql = "SELECT usuario.idusuario, usuario.mail, usuario.nombre,usuario.apellido, tri.nombre,`tris compartidos`.comentario,tri.identificador, tri.idtri,tri.foto FROM `tris compartidos` INNER JOIN tri ON `tris compartidos`.tri_idtri=tri.idtri INNER JOIN usuario ON `tris compartidos`.tri_usuario_idusuario=usuario.idusuario WHERE `tris compartidos`.usuario_idusuario='"
+					+ idUsuario + "' AND `tris compartidos`.habilitado='0'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+			/*String idUsuAux = "-1";
+			ArrayList<TriCompartido> arrayAuxTris = null;
+			Usuario usuAux = null;
+			TriCompartido triAux = null;*/
+			
+			ArrayList<TriCompartido> resp = new ArrayList<TriCompartido>();
+			TriCompartido triAux = null;
+	while(resultSet.next()){
+		triAux = new TriCompartido();
+		triAux.setIdTri(resultSet.getString("idtri"));
+		triAux.setFoto(resultSet.getString("foto"));
+		triAux.setIdentificador(resultSet.getString("identificador"));
+		triAux.setComentario(resultSet.getString("comentario"));
+		triAux.setNombre(resultSet.getString(5));
+		triAux.setIdUsuario(resultSet.getString("idusuario"));
+		triAux.setNombreUsuario(resultSet.getString(3));
+		triAux.setApellidoUsuario(resultSet.getString("apellido"));
+		triAux.setMailUsuario(resultSet.getString("mail"));
+		resp.add(triAux);
+		
+	}
+			
+			
+			/*		while (resultSet.next()) {
+				if (idUsuAux == "-1") {
+					arrayAuxTris = new ArrayList<TriCompartido>();
+					usuAux = new Usuario();
+					usuAux.setApellido(resultSet.getString("apellido"));
+					usuAux.setNombre(resultSet.getString("nombre"));
+					usuAux.setidUsuario(resultSet.getString("idusuario"));
+					usuAux.setMail(resultSet.getString("mail"));
+
+				}
+
+				triAux = new TriCompartido();
+				triAux.setIdTri(resultSet.getString("idtri"));
+				triAux.setFoto(resultSet.getString("foto"));
+				triAux.setIdentificador(resultSet.getString("identificador"));
+				triAux.setComentario(resultSet.getString("comentario"));
+				triAux.setNombre(resultSet.getString("nombre"));
+
+				if (idUsuAux.equals(resultSet.getString("idusuario"))
+						|| idUsuAux.equals("-1")) {
+					arrayAuxTris.add(triAux);
+					usuAux.setArrayListTrisCompartidos(arrayAuxTris);
+					idUsuAux = resultSet.getString("idusuario");
+					if (resultSet.isLast()) {
+
+						resp.add(usuAux);
+					}
+
+				} else {
+					resp.add(usuAux);
+					usuAux = new Usuario();
+					usuAux.setApellido(resultSet.getString("apellido"));
+					usuAux.setNombre(resultSet.getString("nombre"));
+					usuAux.setidUsuario(resultSet.getString("idusuario"));
+					usuAux.setMail(resultSet.getString("mail"));
+					usuAux.setidUsuario(resultSet.getString("idusuario"));
+
+					arrayAuxTris = new ArrayList<TriCompartido>();
+					arrayAuxTris.add(triAux);
+					usuAux.setArrayListTrisCompartidos(arrayAuxTris);
+
+					idUsuAux = resultSet.getString("idusuario");
+					if (resultSet.isLast()) {
+						resp.add(usuAux);
+					}
+				}
+
+			}
+*/
+			return resp;
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			return null;
+		} finally {
+
+			closeLasCosas();
 
 		}
 
