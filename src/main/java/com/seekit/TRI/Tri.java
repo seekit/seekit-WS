@@ -161,11 +161,13 @@ public class Tri {
 
 	}
 
-	public boolean markAsLost(String idUsuario) {
+	public boolean marcarComoPerdido(String idUsuario) {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
 		try {
 			statement = conn.createStatement();
+			// primero insertamos, si esto sale bien updateamos la fila del tri
+			// perdido
 			String sql = "INSERT INTO `tris perdidos`(tri_idtri, tri_usuario_idusuario, identificador, location) VALUES ('"
 					+ idTri
 					+ "','"
@@ -174,8 +176,26 @@ public class Tri {
 					+ identificador
 					+ "','null')";
 			System.out.println(sql);
-			statement.executeUpdate(sql);
-			return true;
+			int resp = statement.executeUpdate(sql);
+
+			if (resp == 0) {
+				return false;
+			} else {
+				sql = "UPDATE tri SET perdido='1' WHERE idtri='" + idTri + "'";
+
+				System.out.println(sql);
+
+				resp = statement.executeUpdate(sql);
+
+				System.out.println(resp);
+				if (resp == 0) {
+					return false;
+				} else {
+					return true;
+				}
+
+			}
+
 		} catch (SQLException e) {
 
 			e.printStackTrace();
@@ -242,6 +262,86 @@ public class Tri {
 		}
 	}
 
-	
+	public boolean desmarcarComoPerdido(String idUsuario) {
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		try {
+			statement = conn.createStatement();
+			String sql = "DELETE FROM `tris perdidos` WHERE `tri_idtri`='"
+					+ idTri + "' AND `tri_usuario_idusuario`='" + idUsuario
+					+ "' ";
+			System.out.println(sql);
+			int resp = statement.executeUpdate(sql);
+			System.out.println(resp);
+			if (resp == 0) {
+
+				return false;
+			} else {
+
+				sql = "UPDATE tri SET perdido='0' WHERE idtri='" + idTri + "'";
+
+				System.out.println(sql);
+
+				resp = statement.executeUpdate(sql);
+
+				System.out.println(resp);
+				if (resp == 0) {
+					return false;
+				} else {
+					return true;
+				}
+
+			}
+
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			return false;
+		} finally {
+			closeLasCosas();
+
+		}
+	}
+
+	public boolean seEncontroTriPerdido() {
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		try {
+			statement = conn.createStatement();
+			String sql = "DELETE FROM `tris perdidos` WHERE `tri_idtri`='"
+					+ idTri + "'";
+
+			System.out.println(sql);
+
+			int resp = statement.executeUpdate(sql);
+
+			System.out.println(resp);
+			if (resp == 0) {
+				return false;
+			} else {
+				sql = "UPDATE tri SET location='" + localizacion
+						+ "', perdido='2' WHERE idtri='" + idTri + "'";
+				System.out.println(sql);
+
+				resp = statement.executeUpdate(sql);
+
+				System.out.println(resp);
+				if (resp == 0) {
+					return false;
+				} else {
+					return true;
+				}
+
+			}
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			return false;
+		} finally {
+			closeLasCosas();
+
+		}
+
+	}
 
 }

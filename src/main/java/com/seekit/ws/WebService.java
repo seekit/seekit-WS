@@ -186,8 +186,8 @@ public class WebService {
 	}
 
 	// Tri marcad como perdido
-	@RequestMapping(value = "/markAsLost")
-	public ResponseEntity<Tri> getMarkAsLost(
+	@RequestMapping(value = "/marcarComoPerdido")
+	public ResponseEntity<Tri> getMarcarComoPerdido(
 			@RequestParam(value = "idTri", required = true) String idTri,
 			@RequestParam(value = "idUsuario", required = true) String idUsuario,
 			@RequestParam(value = "identificador", required = false, defaultValue = "null") String identificador,
@@ -195,8 +195,27 @@ public class WebService {
 
 		Tri triAux = new Tri(idTri);
 		triAux.setIdentificador(identificador);
-		boolean seMarconComoPerdido = triAux.markAsLost(idUsuario);
+		boolean seMarconComoPerdido = triAux.marcarComoPerdido(idUsuario);
 		if (seMarconComoPerdido) {
+			return new ResponseEntity<Tri>(triAux, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
+		}
+
+	}
+
+	// Desmarcar como perdido
+	@RequestMapping(value = "/desmarcarComoPerdido")
+	public ResponseEntity<Tri> getDesmarcarComoPerdido(
+			@RequestParam(value = "idTri", required = true) String idTri,
+			@RequestParam(value = "idUsuario", required = true) String idUsuario,
+			@RequestParam(value = "identificador", required = false, defaultValue = "null") String identificador,
+			@RequestParam(value = "location", required = false, defaultValue = "null") String location) {
+
+		Tri triAux = new Tri(idTri);
+		triAux.setIdentificador(identificador);
+		boolean sedesmarcoComoPerdido = triAux.desmarcarComoPerdido(idUsuario);
+		if (sedesmarcoComoPerdido) {
 			return new ResponseEntity<Tri>(triAux, HttpStatus.OK);
 		} else {
 			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
@@ -336,6 +355,25 @@ public class WebService {
 
 		return new ResponseEntity<ArrayList<TriCompartido>>(
 				listaTrisCompartidos, HttpStatus.OK);
+
+	}
+
+	// si un tri se encuentra como perdido, se debera eliminar de kla tupla y
+	// actualizar el
+	@RequestMapping(value = "/seEncontroTriPerdido")
+	public ResponseEntity<Tri> seEncontroTriPerdido(
+			@RequestParam(value = "idTri", required = true) String idTri,
+			@RequestParam(value = "location", required = true) String location) {
+
+		Tri triAux = new Tri();
+		triAux.setIdTri(idTri);
+		triAux.setLocalizacion(location);
+		boolean seEncontro = triAux.seEncontroTriPerdido();
+		if (seEncontro) {
+			return new ResponseEntity<Tri>(triAux, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
+		}
 
 	}
 
