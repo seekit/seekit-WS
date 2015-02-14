@@ -11,7 +11,7 @@ public class DatabaseConnection {
 		try {
 
 			Class.forName("com.mysql.jdbc.Driver");
-			String url = "jdbc:mysql://localhost/seekit";
+			String url = "jdbc:mysql://127.0.0.1/seekit";
 			System.out.println("Conexion abierta.");
 			conn = DriverManager.getConnection(url, "root", "");
 		} catch (Exception e) {

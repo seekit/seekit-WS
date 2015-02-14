@@ -13,16 +13,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.seekit.TRI.Tri;
 import com.seekit.TRI.TriCompartido;
+import com.seekit.token.Token;
 import com.seekit.usuario.Usuario;
 
 @RestController
 @RequestMapping("/seekit")
 public class WebService {
 
+	
+
 	@RequestMapping(value = "/login")
 	public ResponseEntity<Usuario> getLogin(
 			@RequestParam(value = "mail", required = true) String mail,
-			@RequestParam(value = "contrasenia", required = true) String contrasenia) {
+			@RequestParam(value = "pass", required = true) String contrasenia) {
 		Usuario usuarioAux = new Usuario(mail, contrasenia);
 		boolean existeusuario = usuarioAux.login();
 		// mejor ya obtengo todos los datos del usuario y us tris con el login
@@ -51,10 +54,19 @@ public class WebService {
 
 				while (res.next()) {
 
-					Tri tri = new Tri(res.getString("identificador"),
-							res.getString("nombre"), res.getString("foto"),
-							res.getInt("activo"), res.getString("location"),
-							res.getInt("perdido"), res.getInt("compartido"));
+
+					Tri tri = new Tri();
+					tri.setIdentificador(res.getString("identificador"));
+					tri.setNombre(res.getString("nombre"));
+					tri.setFoto(res.getString("foto"));
+					tri.setActivo(res.getInt("activo"));
+					tri.setLatitud(res.getString("latitud"));
+					tri.setLongitud(res.getString("longitud"));
+					tri.setPerdido(res.getInt("perdido"));
+					tri.setCompartido(res.getInt("compartido"));
+					
+					
+					
 					tri.setIdTri(res.getString("idtri"));
 					lista.add(tri);
 					System.out.println("Agregue un TRI: "
@@ -89,19 +101,27 @@ public class WebService {
 	@RequestMapping(value = "/register")
 	public ResponseEntity<Usuario> getRegister(
 			@RequestParam(value = "mail", required = false) String mail,
-			@RequestParam(value = "contrasenia", required = false) String contrasenia,
+			@RequestParam(value = "pass", required = false) String contrasenia,
 			@RequestParam(value = "nombre", required = false) String nombre,
 			@RequestParam(value = "apellido", required = false) String apellido) {
 
 		Usuario usuarioAux = new Usuario(nombre, apellido, mail, contrasenia);
-		boolean seRegistro = usuarioAux.register();
-
+		String idU = usuarioAux.register();
+		
+		boolean seCreoToken=false;
+		
+		if(!idU.equals("NOK")){
+			Token aToken =new Token();
+			aToken.setIdUsuario(idU);
+			seCreoToken = aToken.crearToken();
+		}
+		
 		/*
 		 * System.out.println(usuarioAux.getApellido() + "  " +
 		 * usuarioAux.getContrasenia() + "  " + usuarioAux.getMail() + "  " +
 		 * usuarioAux.getNombre() + "  " + seRegistro);
 		 */
-		if (seRegistro) {
+		if (seCreoToken) {
 			return new ResponseEntity<Usuario>(usuarioAux, HttpStatus.OK);
 		}
 		return new ResponseEntity<Usuario>(HttpStatus.NOT_ACCEPTABLE);
@@ -111,12 +131,17 @@ public class WebService {
 	// Agregar un TRI asociado a unn usuario
 	@RequestMapping(value = "/addTri")
 	public ResponseEntity<Tri> getAddTri(
-			@RequestParam(value = "idUsuario", required = false) String idUsuario,
-			@RequestParam(value = "identificador", required = false) String identificador,
-			@RequestParam(value = "nombre", required = false) String nombre,
-			@RequestParam(value = "foto", required = false) String foto) {
+			@RequestParam(value = "idUsuario", required = true) String idUsuario,
+			@RequestParam(value = "identificador", required = true) String identificador,
+			@RequestParam(value = "nombre", required = true) String nombre,
+			@RequestParam(value = "foto", required = false, defaultValue = "null") String foto,
+			@RequestParam(value = "descripcion", required = false) String descripcion) {
 
-		Tri triAux = new Tri(identificador, nombre, foto);
+		Tri triAux = new Tri();
+		triAux.setIdentificador(identificador);
+		triAux.setNombre(nombre);
+		triAux.setFoto(foto);
+		triAux.setDescripcion(descripcion);
 		boolean seAgregoTri = triAux.addTri(idUsuario);
 		if (seAgregoTri == true) {
 
@@ -139,11 +164,18 @@ public class WebService {
 			System.out.println("antes del Try");
 			while (res.next()) {
 				System.out.println("En el while");
-				Tri tri = new Tri(res.getString("identificador"),
-						res.getString("nombre"), res.getString("foto"),
-						res.getInt("activo"), res.getString("location"),
-						res.getInt("perdido"), res.getInt("compartido"));
+				
+				Tri tri = new Tri();
+				tri.setIdentificador(res.getString("identificador"));
+				tri.setNombre(res.getString("nombre"));
+				tri.setFoto(res.getString("foto"));
+				tri.setActivo(res.getInt("activo"));
+				tri.setLatitud(res.getString("latitud"));
+				tri.setLongitud(res.getString("longitud"));
+				tri.setPerdido(res.getInt("perdido"));
+				tri.setCompartido(res.getInt("compartido"));				
 				tri.setIdTri(res.getString("idtri"));
+				tri.setDescripcion(res.getString("descripcion"));
 				lista.add(tri);
 			}
 
@@ -164,6 +196,7 @@ public class WebService {
 				triCompartidosConMigo.setActivo(res2.getInt("activo"));
 				triCompartidosConMigo.setIdTri(res2.getString("idtri"));
 				triCompartidosConMigo.setIdUsuario(res2.getString("idusuario"));
+				triCompartidosConMigo.setDescripcion(res2.getString("descripcion"));
 				triCompartidosConMigo.setNombreUsuario(res2.getString(17));
 				triCompartidosConMigo.setApellidoUsuario(res2.getString(18));
 				triCompartidosConMigo.setMailUsuario(res2.getString(16));
@@ -191,7 +224,8 @@ public class WebService {
 			@RequestParam(value = "idTri", required = true) String idTri,
 			@RequestParam(value = "idUsuario", required = true) String idUsuario,
 			@RequestParam(value = "identificador", required = false, defaultValue = "null") String identificador,
-			@RequestParam(value = "location", required = false, defaultValue = "null") String location) {
+			@RequestParam(value = "latitud", required = false, defaultValue = "null") String latitud,
+			@RequestParam(value = "longitud", required = false, defaultValue = "null") String longitud) {
 
 		Tri triAux = new Tri(idTri);
 		triAux.setIdentificador(identificador);
@@ -210,7 +244,8 @@ public class WebService {
 			@RequestParam(value = "idTri", required = true) String idTri,
 			@RequestParam(value = "idUsuario", required = true) String idUsuario,
 			@RequestParam(value = "identificador", required = false, defaultValue = "null") String identificador,
-			@RequestParam(value = "location", required = false, defaultValue = "null") String location) {
+			@RequestParam(value = "latitud", required = false, defaultValue = "null") String latitud,
+			@RequestParam(value = "longitud", required = false, defaultValue = "null") String longitud) {
 
 		Tri triAux = new Tri(idTri);
 		triAux.setIdentificador(identificador);
@@ -360,14 +395,16 @@ public class WebService {
 
 	// si un tri se encuentra como perdido, se debera eliminar de kla tupla y
 	// actualizar el
-	@RequestMapping(value = "/seEncontroTriPerdido")
+	/*@RequestMapping(value = "/seEncontroTriPerdido")
 	public ResponseEntity<Tri> seEncontroTriPerdido(
 			@RequestParam(value = "idTri", required = true) String idTri,
-			@RequestParam(value = "location", required = true) String location) {
+			@RequestParam(value = "latitud", required = true) String latitud,
+			@RequestParam(value = "longitud", required = true) String longitud) {
 
 		Tri triAux = new Tri();
 		triAux.setIdTri(idTri);
-		triAux.setLocalizacion(location);
+		triAux.setLatitud(latitud);
+		triAux.setLongitud(longitud);
 		boolean seEncontro = triAux.seEncontroTriPerdido();
 		if (seEncontro) {
 			return new ResponseEntity<Tri>(triAux, HttpStatus.OK);
@@ -375,6 +412,147 @@ public class WebService {
 			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
 		}
 
+	}*/
+	
+	@RequestMapping(value = "/seEncontroTriPerdido")
+	public ResponseEntity<ArrayList<Tri>> seEncontroTriPerdido(
+			@RequestParam(value = "idusuario", required = true) String idUsuario) {
+
+		Usuario usuAux =new Usuario();
+		usuAux.setidUsuario(idUsuario);
+		ArrayList<Tri> listaDeTrisPerdidos=null;
+		listaDeTrisPerdidos=usuAux.seEncontroAlgunTriPerdidoMio();
+		
+		
+		if (listaDeTrisPerdidos.size()!=0) {
+			return new ResponseEntity<ArrayList<Tri>>(listaDeTrisPerdidos, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<ArrayList<Tri>>(HttpStatus.NOT_MODIFIED);
+		}
+
 	}
+
+
+	@RequestMapping(value = "/actualizargps")
+	public ResponseEntity<Tri> actualizarGPS(
+			@RequestParam(value = "idusuarioorigen", required = true) String idUsuarioOrigen,
+			@RequestParam(value = "latitud", required = true) String latitud,
+			@RequestParam(value = "longitud", required = true) String longitud,
+			@RequestParam(value = "idtri1", required = true) String idTri1,				
+			@RequestParam(value = "idtri2", required = false, defaultValue="null") String idTri2,		
+			@RequestParam(value = "idtri3", required = false, defaultValue="null") String idTri3,
+			@RequestParam(value = "idtri4", required = false, defaultValue="null") String idTri4,
+			@RequestParam(value = "idtri5", required = false, defaultValue="null") String idTri5,
+			@RequestParam(value = "idtri6", required = false, defaultValue="null") String idTri6,
+			@RequestParam(value = "idtri7", required = false, defaultValue="null") String idTri7,
+			@RequestParam(value = "idtri8", required = false, defaultValue="null") String idTri8,
+			@RequestParam(value = "idtri9", required = false, defaultValue="null") String idTri9,
+			@RequestParam(value = "idtri10", required = false, defaultValue="null") String idTri10) {
+		
+		ArrayList<String> listaAux=new ArrayList<String>();
+		listaAux.add(idTri1);
+		if(!idTri2.equals("null")){
+			listaAux.add(idTri2);
+			if(!idTri3.equals("null")){
+				listaAux.add(idTri3);
+				if(!idTri4.equals("null")){
+					listaAux.add(idTri4);
+					if(!idTri5.equals("null")){
+						listaAux.add(idTri5);
+						if(!idTri6.equals("null")){
+							listaAux.add(idTri6);
+							if(!idTri7.equals("null")){
+								listaAux.add(idTri7);
+								if(!idTri8.equals("null")){
+									listaAux.add(idTri8);
+									if(!idTri9.equals("null")){
+										listaAux.add(idTri9);
+										if(!idTri10.equals("null")){
+											listaAux.add(idTri10);
+											
+										}
+											
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		
+		
+		Tri triAux = new Tri();
+		triAux.setLatitud(latitud);
+		triAux.setLongitud(longitud);
+		boolean seActualizo = triAux.actualizarGPS(idUsuarioOrigen,listaAux);
+		
+
+		
+		if (seActualizo) {
+			return new ResponseEntity<Tri>(triAux, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
+		}
+
+	}
+	
+	//borrar tri
+	@RequestMapping(value = "/getEliminarTri")
+	public ResponseEntity<Tri> getEliminarTri(
+			@RequestParam(value = "idTri", required = true) String idTri) {
+
+		Tri triEliminado = new Tri();
+		triEliminado.setIdTri(idTri);
+		boolean seElimino=triEliminado.eliminarTri();
+		
+		if (seElimino) {
+			return new ResponseEntity<Tri>(triEliminado, HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
+		}
+
+
+	}
+	
+	//borrar usuario
+	@RequestMapping(value = "/getEliminarUsuario")
+	public ResponseEntity<Usuario> getEliminarUuario(
+			@RequestParam(value = "idUsuario", required = true) String idUsuario) {
+
+		Usuario usuEliminado = new Usuario();
+		usuEliminado.setidUsuario(idUsuario);
+		boolean seElimino= usuEliminado.eliminarUsuario();
+
+		if (seElimino) {
+			return new ResponseEntity<Usuario>(HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Usuario>(HttpStatus.NOT_MODIFIED);
+		}
+
+	}
+
+	
+	@RequestMapping(value = "/getToken")
+	public ResponseEntity<Usuario> getToken(
+			@RequestParam(value = "idUsuario", required = true) String idUsuario,
+			@RequestParam(value = "token", required = true) String token) {
+
+		Token aToken = new Token();
+		aToken.setToken(token);
+		aToken.setIdUsuario(idUsuario);
+		boolean seComprobo =aToken.chequearToken();
+
+		
+
+		if (seComprobo) {
+			return new ResponseEntity<Usuario>(HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Usuario>(HttpStatus.NOT_MODIFIED);
+		}
+
+	}
+	
 
 }

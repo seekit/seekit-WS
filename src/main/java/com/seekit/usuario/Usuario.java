@@ -3,6 +3,7 @@ package com.seekit.usuario;
 import java.sql.*;
 import java.util.ArrayList;
 
+import com.seekit.TRI.Tri;
 import com.seekit.TRI.TriCompartido;
 import com.seekit.bd.DatabaseConnection;
 
@@ -18,6 +19,9 @@ public class Usuario {
 	private String apellido = null;
 	private String mail = null;
 	private String contrasenia = null;
+	// el token, necesario
+	private String miToken = null;
+
 	private ArrayList<TriCompartido> arrayListTrisCompartidos = null;
 
 	public Usuario(String nombre, String apellido, String mail,
@@ -89,13 +93,21 @@ public class Usuario {
 		this.contrasenia = contrasenia;
 	}
 
+	public String getMiToken() {
+		return miToken;
+	}
+
+	public void setMiToken(String miToken) {
+		this.miToken = miToken;
+	}
+
 	// metodo login: permitira al usuario chequearse contra la BD
 	public boolean login() {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
 		try {
 			statement = conn.createStatement();
-			String sql = "SELECT * FROM usuario JOIN autenticación ON usuario.idusuario=autenticación.usuario_idusuario WHERE usuario.mail='"
+			String sql = "SELECT * FROM usuario JOIN autenticación ON usuario.idusuario=autenticación.usuario_idusuario JOIN tokens ON usuario.idusuario=tokens.idusuario WHERE usuario.mail='"
 					+ mail + "' AND autenticación.pass='" + contrasenia + "'";
 			System.out.println(sql);
 			resultSet = statement.executeQuery(sql);
@@ -107,7 +119,7 @@ public class Usuario {
 				setApellido(resultSet.getString("apellido"));
 				setNombre(resultSet.getString("nombre"));
 				setidUsuario(resultSet.getString("idusuario"));
-
+				setMiToken(resultSet.getString("idtoken"));
 				return true;
 				// si no existe no podta loguearse y un error aparecera.
 			} else {
@@ -124,7 +136,7 @@ public class Usuario {
 
 	}
 
-	public boolean register() {
+	public String register() {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
 		try {
@@ -133,7 +145,7 @@ public class Usuario {
 			if (existeUsu()) {
 				closeLasCosas();
 				System.out.println("Esixe el usu");
-				return false;
+				return "NOK";
 			}
 
 			// inserta el usuario en la BD
@@ -150,6 +162,7 @@ public class Usuario {
 			// ahora con el ID, puedo rellenar la tabla autenticacion
 			if (resultSet.next()) {
 				setidUsuario(resultSet.getString(1));
+
 				System.out.println(resultSet.getString(1));
 				statement
 						.executeUpdate("INSERT INTO autenticación(usuario_idusuario, mail, pass) VALUES ('"
@@ -160,13 +173,13 @@ public class Usuario {
 								+ contrasenia + "')");
 
 			}
-			return true;
+			return getidUsuario();
 
 		} catch (SQLException e) {
-			System.out.println("A");
+
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return false;
+			return "NOK";
 		} finally {
 			closeLasCosas();
 		}
@@ -175,6 +188,7 @@ public class Usuario {
 
 	// cierra las cosas reacionadas a la BD
 	public void closeLasCosas() {
+		System.out.println("aaaa");
 		if (resultSet != null) {
 			try {
 				resultSet.close();
@@ -337,7 +351,7 @@ public class Usuario {
 
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
-		//ArrayList<Usuario> resp = new ArrayList<Usuario>();
+		// ArrayList<Usuario> resp = new ArrayList<Usuario>();
 
 		try {
 			statement = conn.createStatement();
@@ -345,78 +359,248 @@ public class Usuario {
 					+ idUsuario + "' AND `tris compartidos`.habilitado='0'";
 			System.out.println(sql);
 			resultSet = statement.executeQuery(sql);
-			/*String idUsuAux = "-1";
-			ArrayList<TriCompartido> arrayAuxTris = null;
-			Usuario usuAux = null;
-			TriCompartido triAux = null;*/
-			
+			/*
+			 * String idUsuAux = "-1"; ArrayList<TriCompartido> arrayAuxTris =
+			 * null; Usuario usuAux = null; TriCompartido triAux = null;
+			 */
+
 			ArrayList<TriCompartido> resp = new ArrayList<TriCompartido>();
 			TriCompartido triAux = null;
-	while(resultSet.next()){
-		triAux = new TriCompartido();
-		triAux.setIdTri(resultSet.getString("idtri"));
-		triAux.setFoto(resultSet.getString("foto"));
-		triAux.setIdentificador(resultSet.getString("identificador"));
-		triAux.setComentario(resultSet.getString("comentario"));
-		triAux.setNombre(resultSet.getString(5));
-		triAux.setIdUsuario(resultSet.getString("idusuario"));
-		triAux.setNombreUsuario(resultSet.getString(3));
-		triAux.setApellidoUsuario(resultSet.getString("apellido"));
-		triAux.setMailUsuario(resultSet.getString("mail"));
-		resp.add(triAux);
-		
-	}
-			
-			
-			/*		while (resultSet.next()) {
-				if (idUsuAux == "-1") {
-					arrayAuxTris = new ArrayList<TriCompartido>();
-					usuAux = new Usuario();
-					usuAux.setApellido(resultSet.getString("apellido"));
-					usuAux.setNombre(resultSet.getString("nombre"));
-					usuAux.setidUsuario(resultSet.getString("idusuario"));
-					usuAux.setMail(resultSet.getString("mail"));
-
-				}
-
+			while (resultSet.next()) {
 				triAux = new TriCompartido();
 				triAux.setIdTri(resultSet.getString("idtri"));
 				triAux.setFoto(resultSet.getString("foto"));
 				triAux.setIdentificador(resultSet.getString("identificador"));
 				triAux.setComentario(resultSet.getString("comentario"));
-				triAux.setNombre(resultSet.getString("nombre"));
-
-				if (idUsuAux.equals(resultSet.getString("idusuario"))
-						|| idUsuAux.equals("-1")) {
-					arrayAuxTris.add(triAux);
-					usuAux.setArrayListTrisCompartidos(arrayAuxTris);
-					idUsuAux = resultSet.getString("idusuario");
-					if (resultSet.isLast()) {
-
-						resp.add(usuAux);
-					}
-
-				} else {
-					resp.add(usuAux);
-					usuAux = new Usuario();
-					usuAux.setApellido(resultSet.getString("apellido"));
-					usuAux.setNombre(resultSet.getString("nombre"));
-					usuAux.setidUsuario(resultSet.getString("idusuario"));
-					usuAux.setMail(resultSet.getString("mail"));
-					usuAux.setidUsuario(resultSet.getString("idusuario"));
-
-					arrayAuxTris = new ArrayList<TriCompartido>();
-					arrayAuxTris.add(triAux);
-					usuAux.setArrayListTrisCompartidos(arrayAuxTris);
-
-					idUsuAux = resultSet.getString("idusuario");
-					if (resultSet.isLast()) {
-						resp.add(usuAux);
-					}
-				}
+				triAux.setNombre(resultSet.getString(5));
+				triAux.setIdUsuario(resultSet.getString("idusuario"));
+				triAux.setNombreUsuario(resultSet.getString(3));
+				triAux.setApellidoUsuario(resultSet.getString("apellido"));
+				triAux.setMailUsuario(resultSet.getString("mail"));
+				resp.add(triAux);
 
 			}
-*/
+
+			/*
+			 * while (resultSet.next()) { if (idUsuAux == "-1") { arrayAuxTris =
+			 * new ArrayList<TriCompartido>(); usuAux = new Usuario();
+			 * usuAux.setApellido(resultSet.getString("apellido"));
+			 * usuAux.setNombre(resultSet.getString("nombre"));
+			 * usuAux.setidUsuario(resultSet.getString("idusuario"));
+			 * usuAux.setMail(resultSet.getString("mail"));
+			 * 
+			 * }
+			 * 
+			 * triAux = new TriCompartido();
+			 * triAux.setIdTri(resultSet.getString("idtri"));
+			 * triAux.setFoto(resultSet.getString("foto"));
+			 * triAux.setIdentificador(resultSet.getString("identificador"));
+			 * triAux.setComentario(resultSet.getString("comentario"));
+			 * triAux.setNombre(resultSet.getString("nombre"));
+			 * 
+			 * if (idUsuAux.equals(resultSet.getString("idusuario")) ||
+			 * idUsuAux.equals("-1")) { arrayAuxTris.add(triAux);
+			 * usuAux.setArrayListTrisCompartidos(arrayAuxTris); idUsuAux =
+			 * resultSet.getString("idusuario"); if (resultSet.isLast()) {
+			 * 
+			 * resp.add(usuAux); }
+			 * 
+			 * } else { resp.add(usuAux); usuAux = new Usuario();
+			 * usuAux.setApellido(resultSet.getString("apellido"));
+			 * usuAux.setNombre(resultSet.getString("nombre"));
+			 * usuAux.setidUsuario(resultSet.getString("idusuario"));
+			 * usuAux.setMail(resultSet.getString("mail"));
+			 * usuAux.setidUsuario(resultSet.getString("idusuario"));
+			 * 
+			 * arrayAuxTris = new ArrayList<TriCompartido>();
+			 * arrayAuxTris.add(triAux);
+			 * usuAux.setArrayListTrisCompartidos(arrayAuxTris);
+			 * 
+			 * idUsuAux = resultSet.getString("idusuario"); if
+			 * (resultSet.isLast()) { resp.add(usuAux); } }
+			 * 
+			 * }
+			 */
+			return resp;
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			return null;
+		} finally {
+
+			closeLasCosas();
+
+		}
+
+	}
+
+	public boolean eliminarUsuario() {
+
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		String sql = null;
+		boolean ejecutar = false;
+		try {
+			statement = conn.createStatement();
+			// borro los tris que le compartieron
+			sql = "SELECT tri_usuario_idusuario FROM `tris compartidos` WHERE `tri_usuario_idusuario`='"
+					+ idUsuario + "'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+
+			sql = "DELETE FROM `tris compartidos` WHERE `tri_usuario_idusuario` IN (";
+			while (resultSet.next()) {
+				sql = sql.concat(resultSet.getString("tri_usuario_idusuario"));
+				if (!resultSet.isLast()) {
+					sql = sql.concat(",");
+				}
+
+				ejecutar = true;
+
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			if (ejecutar) {
+				statement.executeUpdate(sql);
+			}
+			ejecutar = false;
+			// borro los tris que compartio (al revez es pero ta)
+			sql = "SELECT usuario_idusuario FROM `tris compartidos` WHERE `usuario_idusuario`='"
+					+ idUsuario + "'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+
+			sql = "DELETE FROM `tris compartidos` WHERE `usuario_idusuario` IN (";
+			while (resultSet.next()) {
+				sql = sql.concat(resultSet.getString("usuario_idusuario"));
+				if (!resultSet.isLast()) {
+					sql = sql.concat(",");
+				}
+				ejecutar = true;
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			if (ejecutar) {
+				statement.executeUpdate(sql);
+			}
+			ejecutar = false;
+			// si marcon uno como perdido, desaparece.
+			sql = "SELECT tri_idtri FROM `tris perdidos` WHERE tri_usuario_idusuario='"
+					+ idUsuario + "'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+
+			sql = "DELETE FROM `tris perdidos` WHERE tri_idtri IN (";
+
+			while (resultSet.next()) {
+				sql = sql.concat(resultSet.getString("tri_idtri"));
+				if (!resultSet.isLast()) {
+					sql = sql.concat(",");
+
+				}
+				ejecutar = true;
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			if (ejecutar) {
+				statement.executeUpdate(sql);
+			}
+			ejecutar = false;
+
+			// borros los tris pertenencientes al usuario
+			sql = "SELECT idtri FROM tri WHERE usuario_idusuario='" + idUsuario
+					+ "'";
+			System.out.println(sql);
+
+			resultSet = statement.executeQuery(sql);
+			sql = "DELETE FROM tri WHERE idtri IN (";
+			while (resultSet.next()) {
+				sql = sql.concat(resultSet.getString("idtri"));
+				if (!resultSet.isLast()) {
+					sql = sql.concat(",");
+				}
+				ejecutar = true;
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			if (ejecutar) {
+				statement.executeUpdate(sql);
+			}
+			ejecutar = false;
+			
+			//elimino la contrasenia de la tabla autenticacion
+			sql = "DELETE FROM `autenticación` WHERE usuario_idusuario='"+idUsuario+"'";
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+			
+			// elimino el usuario mismo
+			sql = "DELETE FROM usuario WHERE idusuario IN (" + idUsuario + ")";
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			return true;
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			return false;
+		} finally {
+
+			closeLasCosas();
+
+		}
+
+	}
+
+	// este metodo debe devolver todos los tris que se encontraron y
+	// desPerderlos en la base de datos
+	public ArrayList<Tri> seEncontroAlgunTriPerdidoMio() {
+
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		ArrayList<Tri> resp = new ArrayList<Tri>();
+		ArrayList<String> listaTris = new ArrayList<String>();
+
+		try {
+			statement = conn.createStatement();
+			String sql = "SELECT * FROM tri WHERE perdido='2' AND usuario_idusuario='"
+					+ idUsuario + "'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+			while (resultSet.next()) {
+				Tri triAux = new Tri();
+				triAux.setIdTri(resultSet.getString("idtri"));
+				triAux.setFoto(resultSet.getString("foto"));
+				triAux.setIdentificador(resultSet.getString("identificador"));
+				triAux.setNombre(resultSet.getString("nombre"));
+				triAux.setLatitud(resultSet.getString("latitud"));
+				triAux.setLongitud(resultSet.getString("longitud"));
+				resp.add(triAux);
+				listaTris.add(resultSet.getString("idtri"));
+
+			}
+			sql = "UPDATE `tri` SET perdido='0' WHERE `idtri` IN (";
+			for (int i = 0; i < listaTris.size(); i++) {
+				sql = sql.concat(listaTris.get(i));
+				if (i < listaTris.size() - 1) {
+					sql = sql.concat(",");
+				}
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			sql = "DELETE FROM `tris perdidos` WHERE `tri_idtri` IN (";
+
+			for (int i = 0; i < listaTris.size(); i++) {
+				sql = sql.concat(listaTris.get(i));
+				if (i < listaTris.size() - 1) {
+					sql = sql.concat(",");
+				}
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
 			return resp;
 		} catch (SQLException e) {
 

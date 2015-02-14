@@ -14,6 +14,7 @@ public class TriCompartido {
 	private Statement statement = null;
 	private ResultSet resultSet = null;
 
+	// variables de la clase
 	String idTri = null;
 	String identificador = null;
 	String nombre = null;
@@ -25,6 +26,7 @@ public class TriCompartido {
 	String idUsuarioPropietario = null;
 	String habilitado = "0";
 	String comentario = null;
+	String descripcion = null;
 
 	// usuario propietario de este TRI
 	String idUsuario = null;
@@ -132,6 +134,14 @@ public class TriCompartido {
 		this.compartido = compartido;
 	}
 
+	public String getDescripcion() {
+		return descripcion;
+	}
+
+	public void setDescripcion(String descripcion) {
+		this.descripcion = descripcion;
+	}
+
 	public String getIdUsuarioPropietario() {
 		return idUsuarioPropietario;
 	}
@@ -184,7 +194,7 @@ public class TriCompartido {
 
 		try {
 			statement = conn.createStatement();
-			String sql=null;
+			String sql = null;
 			if (confirmar.equals("1")) {
 				sql = "UPDATE `tris compartidos` SET habilitado='1' WHERE usuario_idusuario='"
 						+ idUsuario
@@ -201,7 +211,6 @@ public class TriCompartido {
 						+ idUsuarioPropietario + "'";
 			}
 
-			
 			System.out.println(sql);
 			statement.executeUpdate(sql);
 			return true;

@@ -20,18 +20,20 @@ public class Tri {
 	String nombre = null;
 	String foto = null;
 	int activo = 1;
-	String localizacion = null;
+	String latitud = null;
+	String longitud = null;
+	String descripcion = null;
 	int perdido = 0;
 	int compartido = 0;
 
 	public Tri(String identificador, String nombre, String foto, int activo,
-			String localizacion, int perdido, int compartido) {
+			String latitud, int perdido, int compartido) {
 		super();
 		this.identificador = identificador;
 		this.nombre = nombre;
 		this.foto = foto;
 		this.activo = activo;
-		this.localizacion = localizacion;
+		this.latitud = latitud;
 		this.perdido = perdido;
 		this.compartido = compartido;
 	}
@@ -91,12 +93,20 @@ public class Tri {
 		this.activo = activo;
 	}
 
-	public String getLocalizacion() {
-		return localizacion;
+	public String getLatitud() {
+		return latitud;
 	}
 
-	public void setLocalizacion(String localizacion) {
-		this.localizacion = localizacion;
+	public void setLatitud(String latitud) {
+		this.latitud = latitud;
+	}
+
+	public String getLongitud() {
+		return longitud;
+	}
+
+	public void setLongitud(String longitud) {
+		this.longitud = longitud;
 	}
 
 	public int getPerdido() {
@@ -115,19 +125,33 @@ public class Tri {
 		this.compartido = compartido;
 	}
 
+	public String getDescripcion() {
+		return descripcion;
+	}
+
+	public void setDescripcion(String descripcion) {
+		this.descripcion = descripcion;
+	}
+
 	public boolean addTri(String idUsuario) {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
 
 		try {
 			statement = conn.createStatement();
-			String sql = "INSERT INTO tri(usuario_idusuario, identificador, nombre, foto, activo, location, perdido, compartido) VALUES ('"
+			String sql = "INSERT INTO tri(usuario_idusuario, identificador, nombre, foto, activo, latitud, longitud, perdido, compartido) VALUES ('"
 					+ idUsuario
 					+ "','"
 					+ identificador
 					+ "','"
 					+ nombre
-					+ "','" + foto + "','1','" + localizacion + "','0','0')";
+					+ "','"
+					+ foto
+					+ "','1','"
+					+ latitud
+					+ "','"
+					+ longitud
+					+ "','0','0')";
 			System.out.println(sql);
 			statement.executeUpdate(sql);
 			return true;
@@ -168,13 +192,13 @@ public class Tri {
 			statement = conn.createStatement();
 			// primero insertamos, si esto sale bien updateamos la fila del tri
 			// perdido
-			String sql = "INSERT INTO `tris perdidos`(tri_idtri, tri_usuario_idusuario, identificador, location) VALUES ('"
+			String sql = "INSERT INTO `tris perdidos`(tri_idtri, tri_usuario_idusuario, identificador, latitud , longitud ) VALUES ('"
 					+ idTri
 					+ "','"
 					+ idUsuario
 					+ "','"
 					+ identificador
-					+ "','null')";
+					+ "','null','null')";
 			System.out.println(sql);
 			int resp = statement.executeUpdate(sql);
 
@@ -319,8 +343,9 @@ public class Tri {
 			if (resp == 0) {
 				return false;
 			} else {
-				sql = "UPDATE tri SET location='" + localizacion
-						+ "', perdido='2' WHERE idtri='" + idTri + "'";
+				sql = "UPDATE tri SET latitud='" + latitud + "',longitud='"
+						+ longitud + "' ,perdido='2' WHERE idtri='" + idTri
+						+ "'";
 				System.out.println(sql);
 
 				resp = statement.executeUpdate(sql);
@@ -340,6 +365,116 @@ public class Tri {
 		} finally {
 			closeLasCosas();
 
+		}
+
+	}
+
+	public boolean eliminarTri() {
+
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		try {
+			statement = conn.createStatement();
+			String sql = "DELETE FROM tri WHERE idtri='" + idTri + "'";
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+			sql = "DELETE FROM `tris compartidos` WHERE tri_usuario_idusuario IN ("
+					+ idTri + ")";
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+			sql = "DELETE FROM `tris compartidos` WHERE usuario_idusuario IN ("
+					+ idTri + ")";
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			return true;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			closeLasCosas();
+		}
+
+	}
+
+	public boolean actualizarGPS(String idUsuarioOrigen,
+			ArrayList<String> listaAux) {
+
+		ArrayList<String> listaIdTrisUsuario = new ArrayList<String>();
+		ArrayList<String> listaTrisDelUsuaioOrigenEncontrados = new ArrayList<String>();
+		DatabaseConnection dbc = new DatabaseConnection();
+		conn = dbc.getConection();
+		try {
+			statement = conn.createStatement();
+			String sql = "SELECT idtri FROM `tri` WHERE usuario_idusuario='"
+					+ idUsuarioOrigen + "'";
+			System.out.println(sql);
+			resultSet = statement.executeQuery(sql);
+
+			if (resultSet.next()) {
+				listaIdTrisUsuario.add(resultSet.getString("idtri"));
+			}
+
+			for (int i = 0; i < listaAux.size(); i++) {
+				System.out.println(i + " - " + listaAux.size());
+				for (int j = 0; j < listaIdTrisUsuario.size(); j++) {
+					System.out.println(j + " - " + listaIdTrisUsuario.size());
+					if ((listaAux.get(i)).equals((listaIdTrisUsuario).get(j))) {
+						System.out.println(listaAux.get(i));
+						listaTrisDelUsuaioOrigenEncontrados
+								.add(listaAux.get(i));
+					}
+
+				}
+			}
+
+			sql = "UPDATE tri SET latitud='" + latitud + "',longitud = '"
+					+ longitud + "' WHERE idtri IN (";
+			for (int i = 0; i < listaTrisDelUsuaioOrigenEncontrados.size(); i++) {
+
+				sql = sql.concat(listaTrisDelUsuaioOrigenEncontrados.get(i));
+
+				if (i < listaTrisDelUsuaioOrigenEncontrados.size() - 1) {
+					sql = sql.concat(",");
+				}
+
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			sql = "UPDATE `tris perdidos` SET latitud='" + latitud
+					+ "',longitud = '" + longitud + "' WHERE tri_idtri IN (";
+			for (int i = 0; i < listaAux.size(); i++) {
+				sql = sql.concat(listaAux.get(i));
+				if (i < listaAux.size() - 1) {
+					sql = sql.concat(",");
+				}
+
+			}
+			sql = sql.concat(")");
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			sql = "UPDATE tri SET perdido='2' WHERE perdido='1' AND idtri IN (";
+			for (int i = 0; i < listaAux.size(); i++) {
+				sql = sql.concat(listaAux.get(i));
+				if (i < listaAux.size() - 1) {
+					sql = sql.concat(",");
+				}
+
+			}
+			sql = sql.concat(")");
+
+			System.out.println(sql);
+			statement.executeUpdate(sql);
+
+			return true;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		} finally {
+			closeLasCosas();
 		}
 
 	}
