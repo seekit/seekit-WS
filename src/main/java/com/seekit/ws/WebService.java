@@ -1,5 +1,7 @@
 package com.seekit.ws;
 
+import java.net.URLDecoder;
+import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -26,6 +28,8 @@ public class WebService {
 	public ResponseEntity<Usuario> getLogin(
 			@RequestParam(value = "mail", required = true) String mail,
 			@RequestParam(value = "pass", required = true) String contrasenia) {
+		
+		
 		Usuario usuarioAux = new Usuario(mail, contrasenia);
 		boolean existeusuario = usuarioAux.login();
 		// mejor ya obtengo todos los datos del usuario y us tris con el login
@@ -130,24 +134,34 @@ public class WebService {
 
 	// Agregar un TRI asociado a unn usuario
 	@RequestMapping(value = "/addTri")
-	public ResponseEntity<Tri> getAddTri(
+	public ResponseEntity<String> getAddTri(
 			@RequestParam(value = "idUsuario", required = true) String idUsuario,
 			@RequestParam(value = "identificador", required = true) String identificador,
 			@RequestParam(value = "nombre", required = true) String nombre,
-			@RequestParam(value = "foto", required = false, defaultValue = "null") String foto,
-			@RequestParam(value = "descripcion", required = false) String descripcion) {
+			@RequestParam(value = "foto", required = true) String foto,
+			@RequestParam(value = "descripcion", required = false, defaultValue = "null") String descripcion) {
 
+		
+		foto=foto.replaceAll(" ", "");
+		
+		System.out.println(foto);
 		Tri triAux = new Tri();
 		triAux.setIdentificador(identificador);
 		triAux.setNombre(nombre);
-		triAux.setFoto(foto);
+		triAux.setFoto(foto);		
 		triAux.setDescripcion(descripcion);
-		boolean seAgregoTri = triAux.addTri(idUsuario);
-		if (seAgregoTri == true) {
+		triAux.setLatitud("null");
+		triAux.setLongitud("null");
+		String seAgregoTri = triAux.addTri(idUsuario);
+		if (!seAgregoTri.equals("-1") && !seAgregoTri.equals("usado") && !seAgregoTri.equals("inexistente")) {
 
-			return new ResponseEntity<Tri>(triAux, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<Tri>(HttpStatus.NOT_ACCEPTABLE);
+			return new ResponseEntity<String>(seAgregoTri, HttpStatus.OK);
+		} else if(seAgregoTri.equals("usado")){
+			return new ResponseEntity<String>("-409",HttpStatus.CONFLICT);
+		}else if(seAgregoTri.equals("inexistente")){
+			return new ResponseEntity<String>("-406",HttpStatus.NOT_ACCEPTABLE);
+		}else{
+			return new ResponseEntity<String>("-1",HttpStatus.NOT_MODIFIED);
 		}
 
 	}
@@ -155,15 +169,15 @@ public class WebService {
 	// Obtener todos los tris de un usuario
 	@RequestMapping(value = "/getTris")
 	public ResponseEntity<WrapperTrisTrisCompartidos> getTrisDelUsario(
-			@RequestParam(value = "idUsuario", required = false) String idUsuario) {
+			@RequestParam(value = "idUsuario", required = true) String idUsuario) {
 		WrapperTrisTrisCompartidos wrapper = new WrapperTrisTrisCompartidos();
 		Usuario usu = new Usuario();
 		List<Tri> lista = new ArrayList<Tri>();
 		ResultSet res = usu.getTrisDelusuario(idUsuario);
 		try {
-			System.out.println("antes del Try");
+			
 			while (res.next()) {
-				System.out.println("En el while");
+				
 				
 				Tri tri = new Tri();
 				tri.setIdentificador(res.getString("identificador"));
@@ -179,7 +193,7 @@ public class WebService {
 				lista.add(tri);
 			}
 
-			System.out.println("Despues del While");
+			
 			List<TriCompartido> listaCompartidosConMigo = new ArrayList<TriCompartido>();
 			ResultSet res2 = usu.getCompartidosConmigo(idUsuario);
 			while (res2.next()) {
@@ -197,9 +211,9 @@ public class WebService {
 				triCompartidosConMigo.setIdTri(res2.getString("idtri"));
 				triCompartidosConMigo.setIdUsuario(res2.getString("idusuario"));
 				triCompartidosConMigo.setDescripcion(res2.getString("descripcion"));
-				triCompartidosConMigo.setNombreUsuario(res2.getString(17));
-				triCompartidosConMigo.setApellidoUsuario(res2.getString(18));
-				triCompartidosConMigo.setMailUsuario(res2.getString(16));
+				triCompartidosConMigo.setNombreUsuario(res2.getString(19));
+				triCompartidosConMigo.setApellidoUsuario(res2.getString(20));
+				triCompartidosConMigo.setMailUsuario(res2.getString("mail"));
 
 				listaCompartidosConMigo.add(triCompartidosConMigo);
 			}
@@ -340,18 +354,19 @@ public class WebService {
 	public ResponseEntity<Usuario> getEditarUsuario(
 			@RequestParam(value = "idUsuario", required = true) String idUsuario,
 			@RequestParam(value = "nombre", required = true) String nombre,
-			@RequestParam(value = "apellido", required = false, defaultValue = "0") String apellido,
+			@RequestParam(value = "apellido", required = true) String apellido,
 			@RequestParam(value = "mail", required = true) String mail,
-			@RequestParam(value = "contrasenia", required = true) String contrasenia) {
+			@RequestParam(value = "passOld", required = true) String passOld,
+			@RequestParam(value = "passNew", required = false, defaultValue="null") String passNew) {
 
 		Usuario usuEdit = new Usuario();
 		usuEdit.setidUsuario(idUsuario);
 		usuEdit.setApellido(apellido);
 		usuEdit.setMail(mail);
 		usuEdit.setNombre(nombre);
-		usuEdit.setContrasenia(contrasenia);
+		usuEdit.setContrasenia(passOld);
 
-		boolean seEditoUsu = usuEdit.editarUsuario();
+		boolean seEditoUsu = usuEdit.editarUsuario(passNew);
 		if (seEditoUsu) {
 			return new ResponseEntity<Usuario>(usuEdit, HttpStatus.OK);
 		} else {
@@ -364,17 +379,24 @@ public class WebService {
 			@RequestParam(value = "idTri", required = true) String idTri,
 			@RequestParam(value = "identificador", required = true) String identificador,
 			@RequestParam(value = "nombre", required = true) String nombre,
-			@RequestParam(value = "foto", required = false, defaultValue = "null") String foto) {
-
+			@RequestParam(value = "foto", required = false, defaultValue = "null") String foto,
+			@RequestParam(value = "descripcion", required = false, defaultValue = "null") String descripcion) {
+		
+		foto=foto.replaceAll(" ", "");
 		Tri triEdit = new Tri();
 		triEdit.setIdTri(idTri);
 		triEdit.setIdentificador(identificador);
 		triEdit.setNombre(nombre);
 		triEdit.setFoto(foto);
-		boolean seEditoTri = triEdit.editarTri();
-		if (seEditoTri) {
+		triEdit.setDescripcion(descripcion);
+		String seEditoTri = triEdit.editarTri();
+		if (!seEditoTri.equals("-1") && !seEditoTri.equals("usado") && !seEditoTri.equals("inexistente")) {
 			return new ResponseEntity<Tri>(triEdit, HttpStatus.OK);
-		} else {
+		} else if(seEditoTri.equals("usado")){
+			return new ResponseEntity<Tri>(HttpStatus.CONFLICT);
+		}else if(seEditoTri.equals("inexistente")){
+			return new ResponseEntity<Tri>(HttpStatus.NOT_ACCEPTABLE);
+		}else{
 			return new ResponseEntity<Tri>(HttpStatus.NOT_MODIFIED);
 		}
 	}
@@ -420,14 +442,14 @@ public class WebService {
 
 		Usuario usuAux =new Usuario();
 		usuAux.setidUsuario(idUsuario);
-		ArrayList<Tri> listaDeTrisPerdidos=null;
+		ArrayList<Tri> listaDeTrisPerdidos=new ArrayList<Tri>();
 		listaDeTrisPerdidos=usuAux.seEncontroAlgunTriPerdidoMio();
 		
 		
 		if (listaDeTrisPerdidos.size()!=0) {
 			return new ResponseEntity<ArrayList<Tri>>(listaDeTrisPerdidos, HttpStatus.OK);
 		} else {
-			return new ResponseEntity<ArrayList<Tri>>(HttpStatus.NOT_MODIFIED);
+			return new ResponseEntity<ArrayList<Tri>>(HttpStatus.NOT_FOUND);
 		}
 
 	}
@@ -554,5 +576,23 @@ public class WebService {
 
 	}
 	
+	@RequestMapping(value = "/getUbicacion")
+	public ResponseEntity<Tri> getUbicacion(
+			@RequestParam(value = "idTri", required = true) String idTri) {
+
+		Tri tri =new Tri();
+		tri.setIdTri(idTri);
+		Tri triRes=null;
+		triRes= tri.obtenerUbicacion();
+
+		
+
+		if (triRes!=null) {
+			return new ResponseEntity<Tri>(tri , HttpStatus.OK);
+		} else {
+			return new ResponseEntity<Tri>(HttpStatus.NOT_FOUND);
+		}
+
+	}
 
 }

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Random;
 
 import com.seekit.bd.DatabaseConnection;
 
@@ -133,8 +134,9 @@ String idUsuario=null;
 		conn = dbc.getConection();
 		try {
 			statement = conn.createStatement();
+			int x = (int) (Math.random()*999999999-999999999);
 			
-			String sql = "INSERT INTO tokens(token, idusuario) VALUES ('"+token+"' , '"+idUsuario+"')";
+			String sql = "INSERT INTO tokens(token, idusuario) VALUES ('"+ x +"' , '"+idUsuario+"')";
 			
 			System.out.println(sql);
 			statement.executeUpdate(sql);

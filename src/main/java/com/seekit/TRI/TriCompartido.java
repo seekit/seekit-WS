@@ -1,5 +1,5 @@
 package com.seekit.TRI;
-
+//http://192.168.1.43:8080/seekit/seekit/triCompartido?idTri=50
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,7 +20,8 @@ public class TriCompartido {
 	String nombre = null;
 	String foto = null;
 	int activo = 1;
-	String localizacion = null;
+	String latitud = null;
+	String longitud = null;
 	int perdido = 0;
 	int compartido = 0;
 	String idUsuarioPropietario = null;
@@ -110,12 +111,12 @@ public class TriCompartido {
 		this.activo = activo;
 	}
 
-	public String getLocalizacion() {
-		return localizacion;
+	public String getLatitud() {
+		return latitud;
 	}
 
-	public void setLocalizacion(String localizacion) {
-		this.localizacion = localizacion;
+	public void setLatitud(String latitud) {
+		this.latitud = latitud;
 	}
 
 	public int getPerdido() {
@@ -164,6 +165,14 @@ public class TriCompartido {
 
 	public void setComentario(String comentario) {
 		this.comentario = comentario;
+	}
+	
+	public String getLongitud() {
+		return longitud;
+	}
+
+	public void setLongitud(String longitud) {
+		this.longitud = longitud;
 	}
 
 	public boolean descompartirTri(String idUsuarioCompartido) {

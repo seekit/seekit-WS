@@ -119,7 +119,7 @@ public class Usuario {
 				setApellido(resultSet.getString("apellido"));
 				setNombre(resultSet.getString("nombre"));
 				setidUsuario(resultSet.getString("idusuario"));
-				setMiToken(resultSet.getString("idtoken"));
+				setMiToken(resultSet.getString("token"));
 				return true;
 				// si no existe no podta loguearse y un error aparecera.
 			} else {
@@ -283,20 +283,44 @@ public class Usuario {
 	}
 
 	// para la edicion del usuario.
-	public boolean editarUsuario() {
+	public boolean editarUsuario(String passNew) {
 		DatabaseConnection dbc = new DatabaseConnection();
 		conn = dbc.getConection();
+
 		try {
 			statement = conn.createStatement();
-			String sql = "UPDATE usuario SET mail='" + mail + "',nombre='"
-					+ nombre + "',apellido='" + apellido + "' WHERE idUsuario="
+			String sql;
+			sql = "SELECT * FROM `autenticación` WHERE pass='" + contrasenia
+					+ "' AND usuario_idusuario='" + idUsuario + "'";
+
+			resultSet = statement.executeQuery(sql);
+
+			if (!resultSet.next()) {
+				System.out
+						.println("Este usuario NO existe o los parametros no son los correctos");
+				return false;
+
+			}
+
+			sql = "UPDATE usuario SET mail='" + mail + "',nombre='" + nombre
+					+ "',apellido='" + apellido + "' WHERE idUsuario="
 					+ idUsuario;
+
 			System.out.println(sql);
 			statement.executeUpdate(sql);
-			sql = "UPDATE autenticación SET mail='" + mail + "',pass='"
-					+ contrasenia + "' WHERE usuario_idusuario=" + idUsuario;
-			System.out.println(sql);
-			statement.executeUpdate(sql);
+
+			if (!passNew.equals("null")) {
+				sql = "UPDATE autenticación SET mail='" + mail + "', pass='"
+						+ passNew + "' WHERE usuario_idusuario=" + idUsuario;
+				System.out.println(sql);
+				statement.executeUpdate(sql);
+
+			} else {
+				sql = "UPDATE autenticación SET mail='" + mail
+						+ "' WHERE usuario_idusuario=" + idUsuario;
+				System.out.println(sql);
+				statement.executeUpdate(sql);
+			}
 
 			return true;
 		} catch (SQLException e) {
@@ -508,31 +532,39 @@ public class Usuario {
 			ejecutar = false;
 
 			// borros los tris pertenencientes al usuario
-			sql = "SELECT idtri FROM tri WHERE usuario_idusuario='" + idUsuario
+			sql = "SELECT idtri,identificador FROM tri WHERE usuario_idusuario='" + idUsuario
 					+ "'";
 			System.out.println(sql);
 
 			resultSet = statement.executeQuery(sql);
 			sql = "DELETE FROM tri WHERE idtri IN (";
+			String sql2 = "UPDATE `trisfabricados` SET `usado`='0' WHERE `identificador` IN ('";
 			while (resultSet.next()) {
 				sql = sql.concat(resultSet.getString("idtri"));
+				sql2=sql2.concat(resultSet.getString("identificador"));
 				if (!resultSet.isLast()) {
 					sql = sql.concat(",");
+					sql2=sql2.concat("','");
 				}
 				ejecutar = true;
 			}
 			sql = sql.concat(")");
+			sql2=sql2.concat("')");
 			System.out.println(sql);
+			System.out.println(sql2);
 			if (ejecutar) {
 				statement.executeUpdate(sql);
+				
+				statement.executeUpdate(sql2);
 			}
 			ejecutar = false;
-			
-			//elimino la contrasenia de la tabla autenticacion
-			sql = "DELETE FROM `autenticación` WHERE usuario_idusuario='"+idUsuario+"'";
+
+			// elimino la contrasenia de la tabla autenticacion
+			sql = "DELETE FROM `autenticación` WHERE usuario_idusuario='"
+					+ idUsuario + "'";
 			System.out.println(sql);
 			statement.executeUpdate(sql);
-			
+
 			// elimino el usuario mismo
 			sql = "DELETE FROM usuario WHERE idusuario IN (" + idUsuario + ")";
 			System.out.println(sql);
@@ -578,29 +610,32 @@ public class Usuario {
 				listaTris.add(resultSet.getString("idtri"));
 
 			}
-			sql = "UPDATE `tri` SET perdido='0' WHERE `idtri` IN (";
-			for (int i = 0; i < listaTris.size(); i++) {
-				sql = sql.concat(listaTris.get(i));
-				if (i < listaTris.size() - 1) {
-					sql = sql.concat(",");
+			//si es 0 significa que ese usario no tiene tris perdidos
+			if (listaTris.size() != 0) {
+
+				sql = "UPDATE `tri` SET perdido='0' WHERE `idtri` IN (";
+				for (int i = 0; i < listaTris.size(); i++) {
+					sql = sql.concat(listaTris.get(i));
+					if (i < listaTris.size() - 1) {
+						sql = sql.concat(",");
+					}
 				}
-			}
-			sql = sql.concat(")");
-			System.out.println(sql);
-			statement.executeUpdate(sql);
+				sql = sql.concat(")");
+				System.out.println(sql);
+				statement.executeUpdate(sql);
 
-			sql = "DELETE FROM `tris perdidos` WHERE `tri_idtri` IN (";
+				sql = "DELETE FROM `tris perdidos` WHERE `tri_idtri` IN (";
 
-			for (int i = 0; i < listaTris.size(); i++) {
-				sql = sql.concat(listaTris.get(i));
-				if (i < listaTris.size() - 1) {
-					sql = sql.concat(",");
+				for (int i = 0; i < listaTris.size(); i++) {
+					sql = sql.concat(listaTris.get(i));
+					if (i < listaTris.size() - 1) {
+						sql = sql.concat(",");
+					}
 				}
+				sql = sql.concat(")");
+				System.out.println(sql);
+				statement.executeUpdate(sql);
 			}
-			sql = sql.concat(")");
-			System.out.println(sql);
-			statement.executeUpdate(sql);
-
 			return resp;
 		} catch (SQLException e) {
 
